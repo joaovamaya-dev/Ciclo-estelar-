@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Formação estelar — da nuvem cósmica ao buraco negro</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+:root{--void:#05040c;--acc:#a9b8ff;--warm:#ff9d6e;--glow:#ffe9f2;--txt:#ece9f7;--mut:#9a96b0;--line:rgba(169,184,255,.22);--panel:rgba(7,5,14,.78)}
+:root:not([data-theme="light"]){color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--void);color:var(--txt);font:14px/1.45 "Hanken Grotesk",system-ui,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#gl:active{cursor:grabbing}
+#hud{position:fixed;left:max(18px,env(safe-area-inset-left));top:calc(env(safe-area-inset-top,0px) + 16px);pointer-events:none;text-shadow:0 0 18px #000;max-width:calc(100vw - 110px)}
+#hud h1{font:400 clamp(32px,7vw,58px)/1 "Instrument Serif",Georgia,serif;margin:0;letter-spacing:-.01em}
+#hud p{margin:8px 0 0;color:var(--glow);opacity:.85;max-width:30ch}
+#ctl{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:9px;max-width:calc(100vw - 110px)}
+#ctl .b{display:flex;gap:8px;flex-wrap:wrap}
+button{font:500 13px "Hanken Grotesk",system-ui,sans-serif;color:var(--txt);background:rgba(169,184,255,.1);border:1px solid var(--line);border-radius:999px;padding:9px 14px;cursor:pointer;backdrop-filter:blur(8px)}
+button:hover{background:rgba(169,184,255,.22)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--warm);outline-offset:2px}
+.sl{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12px}
+.sl span.n{min-width:34px}
+input[type=range]{accent-color:var(--warm);width:150px}
+#hint{color:var(--mut);font-size:12px}
+aside{position:fixed;right:0;top:0;bottom:0;width:78px;padding:calc(env(safe-area-inset-top,0px) + 14px) 10px calc(env(safe-area-inset-bottom,0px) + 14px) 10px;background:linear-gradient(90deg,transparent,var(--panel) 45%);backdrop-filter:blur(10px);display:flex;flex-direction:column;gap:12px;transition:width .35s cubic-bezier(.2,.8,.2,1)}
+aside.open{width:min(340px,90vw)}
+aside header{display:flex;justify-content:flex-end}
+#tg{padding:7px 11px}
+.body{flex:1;min-height:0;display:flex;gap:14px}
+#data{flex:1;display:none;flex-direction:column;overflow:auto;padding-left:14px;touch-action:pan-y}
+aside.open #data{display:flex}
+#data h2{font:400 26px/1.1 "Instrument Serif",Georgia,serif;margin:0 0 4px}
+#data .s{color:var(--mut);margin:0 0 14px;font-size:13px}
+dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:9px 12px}
+dt{color:var(--mut)}dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--glow)}
+#data hr{border:0;border-top:1px solid var(--line);margin:14px 0;width:100%}
+.gauge{position:relative;width:56px;flex:none}
+.bar{position:absolute;right:20px;width:14px;top:0;bottom:0;border-radius:8px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(130,110,210,.22),rgba(169,184,255,.4) 45%,rgba(255,190,130,.8) 80%,#fff)}
+.mk{position:absolute;right:8px;transform:translateY(-50%);display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut);white-space:nowrap}
+.mk .tick{width:30px;height:1px;background:currentColor;opacity:.7}
+.mk .lab{display:none;text-align:right}
+aside.open .mk .lab{display:block}
+.mk.cam{color:var(--acc);font-weight:600}.mk.core{color:var(--warm);font-weight:600}
+.mk.cam .tick,.mk.core .tick{width:36px;height:2px;background:currentColor;box-shadow:0 0 10px currentColor;opacity:1}
+.mk.cam,.mk.core{transition:top .15s linear}
+@media (min-width:820px){aside{width:340px}#tg{display:none}}
+@media (prefers-reduced-motion:reduce){aside{transition:none}}
+#err{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:30px;background:rgba(5,4,12,.9);z-index:9;font-size:12px;white-space:pre-wrap}
+.card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 14px;background:rgba(169,184,255,.05)}
+.card h3{font:600 12px "Hanken Grotesk",sans-serif;color:var(--mut);margin:0 0 6px;letter-spacing:.02em}
+.card p{margin:0;font-size:13px;line-height:1.4}
+.card p.el{color:var(--warm);margin-top:4px;font-weight:600}
+#cno svg{width:100%;height:auto;display:block;margin:2px 0 6px}
+#cno .nd circle{fill:rgba(169,184,255,.08);stroke:var(--line)}
+#cno .nd text,#cno .ed text{fill:var(--txt);font:600 11px "Hanken Grotesk",sans-serif;text-anchor:middle}
+#cno .ed text{fill:var(--mut);font-weight:500;font-size:10px}
+#cno .ed line{stroke:var(--line);stroke-width:1.5}
+#cno .on circle{fill:rgba(255,157,110,.3);stroke:var(--warm)}
+#cno .on line{stroke:var(--warm);stroke-width:2.5}
+#cno .on text{fill:#fff}
+#ly .r{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px}
+#ly i{width:10px;height:10px;border-radius:50%;flex:none}
+#ly b{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--glow);font-weight:600}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="err">Seu navegador não liberou o WebGL. Abra esta página em um navegador atualizado.</div>
+
+<div id="hud"><h1 id="ph">Nuvem molecular</h1><p id="pi"></p></div>
+
+<div id="ctl">
+  <div class="b"><button id="pp">Pausar</button><button id="rs">Reiniciar</button></div>
+  <label class="sl">Linha do tempo <input id="tl" type="range" min="0" max="1400" value="0"></label>
+  <label class="sl">Ritmo <input id="ts" type="range" min="0.25" max="6" step="0.05" value="1"><span class="n" id="tv">1×</span></label>
+  <label class="sl">Distância <input id="zs" type="range" min="3.5" max="30" step="0.1" value="9"></label>
+  <div id="hint">Arraste para orbitar. Role ou use dois dedos para aproximar.</div>
+</div>
+
+<aside id="side" aria-label="Dados da formação estelar">
+  <header><button id="tg" aria-expanded="false">Dados</button></header>
+  <div class="body">
+    <section id="data">
+      <h2>Escala e física</h2>
+      <p class="s">Fragmento de nuvem molecular que forma uma estrela massiva (cerca de 20 M☉), queima elementos até o ferro, explode e deixa um buraco negro.</p>
+      <div class="card"><h3>Reação em curso</h3><p id="rx"></p><p class="el" id="el"></p></div>
+      <div class="card" id="cno" style="display:none"><h3>Ciclo CNO</h3><svg id="cs" viewBox="0 0 280 176" role="img" aria-label="Ciclo CNO"></svg><p>4 ¹H → ⁴He + 2 e⁺ + 2 ν + 26,7 MeV</p></div>
+      <div class="card" id="bh" style="display:none"><h3>Horizonte de eventos</h3><dl>
+        <dt>Raio do horizonte</dt><dd id="b1">—</dd><dt>Esfera de fótons</dt><dd id="b2">—</dd><dt>Última órbita estável</dt><dd id="b3">—</dd>
+        <dt>Sua distância</dt><dd id="b4">—</dd><dt>Velocidade orbital</dt><dd id="b5">—</dd><dt>Relógio local</dt><dd id="b6">—</dd></dl></div>
+      <div class="card" id="ly" style="display:none"><h3>Camadas da estrela (fração do raio)</h3><div id="lyr"></div></div>
+      <dl>
+        <dt>Idade</dt><dd id="g0">—</dd>
+        <dt>Passo do tempo</dt><dd id="g1">—</dd>
+        <dt id="l6">Falta para o colapso</dt><dd id="g5">—</dd>
+      </dl><hr>
+      <dl>
+        <dt>Raio da estrutura</dt><dd id="g2">—</dd>
+        <dt id="l3">Massa em colapso</dt><dd id="g3">—</dd>
+        <dt id="l4">Velocidade de colapso</dt><dd id="g4">—</dd>
+      </dl><hr>
+      <dl>
+        <dt>Densidade central</dt><dd id="c1">—</dd>
+        <dt>Temperatura central</dt><dd id="c2">—</dd>
+        <dt>Raio do núcleo</dt><dd id="c3">—</dd>
+        <dt id="l5">Acreção de gás</dt><dd id="c5">—</dd>
+        <dt>Luminosidade</dt><dd id="c6">—</dd>
+        <dt>Superfície</dt><dd id="c7">—</dd>
+      </dl><hr>
+      <dl>
+        <dt>Azimute</dt><dd id="a1">0°</dd>
+        <dt>Elevação</dt><dd id="a2">0°</dd>
+        <dt>Giro da câmera</dt><dd id="a3">0°/s</dd>
+        <dt>Rotação do gás</dt><dd id="a4">—</dd>
+      </dl>
+    </section>
+    <div class="gauge" id="gauge"></div>
+  </div>
+</aside>
+
+<script>
+const VS="attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}";
+const FS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 R;uniform float T;uniform vec3 C;uniform mat3 B;uniform vec4 P,Q,V,W,X;
+float g=1.;
+float H(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+float N(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(mix(H(i),H(i+vec3(1,0,0)),f.x),mix(H(i+vec3(0,1,0)),H(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(H(i+vec3(0,0,1)),H(i+vec3(1,0,1)),f.x),mix(H(i+vec3(0,1,1)),H(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float F(vec3 p){float a=.5,s=0.;for(int i=0;i<4;i++){s+=a*N(p);p=p*2.03+7.1;a*=.5;}return s;}
+float F3(vec3 p){float a=.5,s=0.;for(int i=0;i<3;i++){s+=a*N(p);p=p*2.03+7.1;a*=.5;}return s;}
+vec3 sky(vec3 d){
+ vec3 c=vec3(0.);
+ for(int k=0;k<3;k++){
+  vec3 p=d*(45.+float(k)*55.),i=floor(p),f=p-i;float r=H(i+float(k)*17.);
+  if(r>.955){vec3 o=.2+.6*vec3(H(i+3.1),H(i+5.7),H(i+9.3));
+   c+=mix(vec3(1.,.8,.6),vec3(.65,.8,1.),H(i+1.7))*smoothstep(.15,0.,length(f-o))*(r-.955)*26.;}
+ }
+ float bd=dot(d,normalize(vec3(.3,.9,.2)));float band=exp(-bd*bd*10.);
+ return c+band*(vec3(.2,.16,.3)*F(d*3.+1.)*F(d*7.+4.)*3.2+vec3(.07,.06,.06));
+}
+vec3 BB(float t){t=max(t,0.);return vec3(1.-.3*clamp(t-1.,0.,1.),smoothstep(0.,1.25,t)*.92+.05*t,smoothstep(.4,1.5,t));}
+vec3 bh(vec3 ro,vec3 rd,float S){
+ vec3 p=ro,v=rd,col=vec3(0.);float tr=1.;
+ vec3 cr=cross(p,v);float h2=dot(cr,cr),rin=3.*S,rout=8.*S;
+ for(int i=0;i<150;i++){
+  float r=length(p);
+  if(r<S){tr=0.;g=0.;break;}
+  if(r>60.&&dot(p,v)>0.)break;
+  float dt=.07*clamp(r-.75*S,.04,40.),xx=(r-1.5*S)/(.2*S);
+  col+=tr*vec3(1.,.6,.28)*exp(-xx*xx)*dt*.45*W.z;
+  v=normalize(v-1.5*S*h2*p/(r*r*r*r*r)*dt);
+  vec3 q0=p;p+=v*dt;
+  if(q0.y*p.y<0.&&tr>.02){
+   vec3 q=mix(q0,p,q0.y/(q0.y-p.y));float rr=length(q.xz);
+   if(rr>rin&&rr<rout){
+    float a=atan(q.z,q.x)+T*.9*pow(rr/S,-1.5);
+    float tb=F(vec3(cos(a),sin(a),0.)*rr*.7/S+vec3(0.,0.,rr*4./S+T*.05));
+    float tn=pow(rin/rr,.75),b=sqrt(.5*S/(rr-S));
+    vec3 vd=normalize(vec3(-q.z,0.,q.x))*b;
+    float D=sqrt(1.-b*b)/(1.+dot(vd,v)),gg=D*sqrt(max(1.-S/rr,0.));
+    float edge=smoothstep(rin,rin*1.06,rr)*(1.-smoothstep(rout*.5,rout,rr));
+    float br=pow(tn,3.)*pow(gg,3.)*(.35+1.5*tb*tb)*edge;
+    col+=tr*BB(tn*gg*1.15)*br*1.3*W.z;
+    tr*=1.-clamp(edge*(.3+.9*tb),0.,.95)*.7*W.z;
+   }
+  }
+ }
+ if(tr>0.&&g>.5)col+=tr*sky(v);
+ return col;
+}
+float dens(vec3 p){
+ float Re=P.x;
+ vec3 q=vec3(p.x,p.y*(1.+P.w*5.),p.z);
+ float rr=length(q.xz),a=Q.z*.25*(1.+.8/(.5+rr)),ca=cos(a),sa=sin(a);
+ q.xz=vec2(ca*q.x-sa*q.z,sa*q.x+ca*q.z);
+ float n=F3(q*1.1+3.),f=1.-abs(2.*n-1.);
+ float d=smoothstep(Re,Re*.2,length(q))*(.04+3.2*pow(f,5.)*(.3+.9*n));
+ d*=mix(1.,smoothstep(.4,.75,F3(q*2.4+9.))*2.2,P.y);
+ d+=P.z*6.*exp(-dot(p,p)/(.05+.3*(1.-P.z)));
+ d*=1.+P.w*.8*sin(2.*atan(q.z,q.x)-3.*log(rr+.1)-Q.z*.6);
+ return d;
+}
+void main(){
+ vec2 uv=(gl_FragCoord.xy-.5*R)/R.y;
+ vec3 rd=normalize(B*vec3(uv,1.7)),ro=C;
+ float bq=dot(ro,rd),Rb=P.x*1.1,db=bq*bq-(dot(ro,ro)-Rb*Rb);
+ float dc=sqrt(max(dot(ro,ro)-bq*bq,0.));
+ vec3 em=vec3(0.);float tr=1.;
+ if(db>0.){
+  float t0=max(-bq-sqrt(db),0.),st=(-bq+sqrt(db)-t0)/60.,t=t0+st*H(vec3(gl_FragCoord.xy,T));
+  for(int i=0;i<60;i++){
+   vec3 p=ro+rd*t;t+=st;
+   float d=dens(p);
+   if(d>.002){
+    float Lc=(.12+P.z*2.2)/(.3+dot(p,p));
+    vec3 lc=mix(vec3(.35,.45,.95),vec3(1.,.62,.32),clamp(Lc*.45,0.,1.));
+    em+=tr*(lc*d*Lc*.3+vec3(.9,.2,.5)*d*d*.02*P.y+vec3(.2,.17,.45)*d*.09)*st;
+    tr*=exp(-d*1.1*st);
+    if(tr<.03)break;
+   }
+  }
+ }
+ vec3 Sc=mix(mix(vec3(.6,.75,1.),vec3(1.,.9,.7),clamp(V.w*2.,0.,1.)),vec3(1.,.35,.12),clamp(V.w*2.-1.,0.,1.));
+ if(V.x>.01){
+  float Rs=V.x,L=V.y;
+  float rHe=mix(.33,.55,L/4.),rC=min(.4*smoothstep(.7,1.7,L),rHe-.03),rNe=.3*smoothstep(1.4,2.4,L),rO=.22*smoothstep(2.,3.,L),rSi=.14*smoothstep(2.6,3.4,L),rFe=.085*smoothstep(3.3,4.,L);
+  float sk=1.-.85*W.x;rHe*=sk;rC*=sk;rNe*=sk;rO*=sk;rSi*=sk;rFe*=sk;
+  float b2=Rs*1.03,d2=bq*bq-(dot(ro,ro)-b2*b2);
+  if(d2>0.){
+   float t0=max(-bq-sqrt(d2),0.),st=(-bq+sqrt(d2)-t0)/64.,t=t0+st*H(vec3(gl_FragCoord.xy,T+3.));
+   float ang=Q.z*.15,ca=cos(ang),sa=sin(ang),cc=mix(1.2,0.,V.z)*Rs;
+   for(int i=0;i<64;i++){
+    vec3 p=ro+rd*t;t+=st;
+    vec3 pl=vec3(ca*p.x-sa*p.z,p.y,sa*p.x+ca*p.z);
+    float r=length(pl)/Rs;
+    if(r>1.)continue;
+    if(pl.x>cc&&pl.y>cc&&pl.z>cc)continue;
+    vec3 lc;
+    if(r<rFe)lc=vec3(.9,.9,1.);
+    else if(r<rSi)lc=vec3(.45,.8,1.);
+    else if(r<rO)lc=vec3(.4,.9,.6);
+    else if(r<rNe)lc=vec3(.95,.4,.8);
+    else if(r<rC)lc=vec3(1.,.5,.2);
+    else if(r<rHe)lc=vec3(1.,.85,.4);
+    else lc=vec3(.3,.45,1.);
+    float nz=F3(pl*3./Rs+T*.05);
+    float e=0.,x;
+    x=(r-rFe)/.02;e+=exp(-x*x)*step(.01,rFe);
+    x=(r-rSi)/.02;e+=exp(-x*x)*step(.01,rSi);
+    x=(r-rO)/.02;e+=exp(-x*x)*step(.01,rO);
+    x=(r-rNe)/.02;e+=exp(-x*x)*step(.01,rNe);
+    x=(r-rC)/.02;e+=exp(-x*x)*step(.01,rC);
+    x=(r-rHe)/.02;e+=exp(-x*x);
+    vec3 E=lc*(.3+.5*nz)+vec3(1.)*e*(.6+.8*nz)+vec3(.7,.85,1.)*exp(-r*r/.035)*(1.-smoothstep(.6,1.4,L))*1.6;
+    E=mix(E,Sc*(.5+1.5*nz*nz),smoothstep(.93,1.,r));
+    E+=vec3(.9,.95,1.)*W.x*exp(-r*r/.02)*4.;
+    float al=(1.-exp(-14.*st))*W.w;
+    em+=tr*al*E;tr*=1.-al;
+    if(tr<.02)break;
+   }
+  }
+ }
+ vec3 col=em+tr*(W.y>.02?bh(ro,rd,W.y):sky(rd));
+ if(V.x>.01&&bq<0.)col+=Sc*.3*V.x*exp(-max(dc-V.x,0.)*2.5/V.x)*smoothstep(V.x*.9,V.x*1.05,dc)*(1.4-V.w*.8)*smoothstep(.01,.3,V.x);
+ if(bq<0.)col+=vec3(1.,.88,.65)*Q.y*(exp(-dc*dc/.012)*1.6+.25*exp(-dc*dc/.5))*mix(1.,tr,.4);
+ col+=vec3(.85,.92,1.)*Q.w*2.5*exp(-dc*dc/(.4+Q.w*3.))*g;
+ if(X.y>.01){
+  vec3 cp0=normalize(ro-rd*bq+vec3(1e-3));
+  float Rr=X.x,nz=F3(cp0*5.+T*.3),x1=(dc-Rr*.96)/(.06*Rr+.1),x2=dc/(Rr*.85);
+  float ring=exp(-x1*x1)*(.4+1.4*nz),fill=exp(-x2*x2)*.18;
+  vec3 sc=mix(vec3(.25,.95,.85),vec3(1.,.4,.5),F3(cp0*3.+7.));
+  sc=mix(vec3(.6,.8,1.),sc,smoothstep(.2,1.,dc/Rr));
+  sc=mix(sc,vec3(1.,.5,.2),smoothstep(.8,1.1,dc/Rr)*.6);
+  col+=sc*(ring*2.+fill)*X.y*g;
+ }
+ float a2=dot(rd.xz,rd.xz)+1e-5,tt=-dot(ro.xz,rd.xz)/a2;
+ if(Q.x>.01&&tt>0.){
+  float s=abs(ro.y+tt*rd.y),dx=length(ro.xz+tt*rd.xz),w=.05+.05*s;
+  float j=(exp(-pow(dx/w,2.))+.2*exp(-pow(dx/(w*3.),2.)))*smoothstep(.2,.7,s)*exp(-s/5.)*min(inversesqrt(a2),8.)*.28*(.65+.35*sin(s*4.-T*5.));
+  col+=mix(vec3(.5,.8,1.),vec3(1.,.42,.2),smoothstep(1.5,5.,s))*j*Q.x;
+ }
+ col=1.-exp(-col*1.7);col=pow(col,vec3(.4545));
+ col*=1.-dot(uv,uv)*.45;col+=(H(vec3(gl_FragCoord.xy,T))-.5)*.02;
+ gl_FragColor=vec4(col,1.);
+}`;
+
+const $=s=>document.getElementById(s),cv=$('gl');
+const gl=cv.getContext('webgl',{antialias:false,powerPreference:'high-performance'});
+if(!gl){$('err').style.display='grid'}
+function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
+ if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){const e=$('err');e.style.display='grid';e.textContent='Erro no shader:\n'+gl.getShaderInfoLog(o)}return o}
+const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);gl.useProgram(pr);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+const U={};['R','T','C','B','P','Q','V','W','X'].forEach(n=>U[n]=gl.getUniformLocation(pr,n));
+let sc=innerWidth<820?.5:.75;
+function size(){const d=Math.min(devicePixelRatio||1,2)*sc;cv.width=innerWidth*d|0;cv.height=innerHeight*d|0;gl.viewport(0,0,cv.width,cv.height)}
+addEventListener('resize',size);size();
+
+/* câmera */
+let zlock=false;const cam={yaw:.6,pitch:.35,dist:9,ty:.6,tp:.35,td:9};let idle=0,yawRate=0,py=0;
+const ptrs=new Map();let pd=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);idle=0;pd=0});
+cv.addEventListener('pointermove',e=>{
+ if(!ptrs.has(e.pointerId))return;const o=ptrs.get(e.pointerId);idle=0;
+ if(ptrs.size===1){cam.ty-=(e.clientX-o[0])*.006;cam.tp=Math.max(-1.5,Math.min(1.5,cam.tp+(e.clientY-o[1])*.006))}
+ ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+ if(ptrs.size===2){const a=[...ptrs.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);if(pd)cam.td=Math.max(3.5,Math.min(30,cam.td*pd/d));zlock=true;pd=d}
+});
+['pointerup','pointercancel'].forEach(n=>cv.addEventListener(n,e=>{ptrs.delete(e.pointerId);pd=0}));
+cv.addEventListener('wheel',e=>{e.preventDefault();cam.td=Math.max(3.5,Math.min(30,cam.td*Math.exp(e.deltaY*.001)));zlock=true;idle=0},{passive:false});
+$('zs').oninput=e=>{cam.td=+e.target.value;zlock=true;idle=0};
+
+/* linha do tempo: k de 0 (nuvem) a 1 (núcleo de ferro); 130 s a 1× */
+const KMAX=1.4,DUR=130;let k=0,play=true,ts=1,spin=0;
+const PHK=[0,.13,.25,.36,.47,.55,.68,.78,.86,.94,1,1.07,1.22];
+const PH=[
+['Nuvem molecular','gás frio e poeira a 10 K, em turbulência lenta','Sem fusão: o gás frio de H₂ e poeira só irradia calor','H, He primordiais'],
+['Fragmentação','a gravidade vence a turbulência e o gás se divide em grumos','Instabilidade de Jeans: a gravidade supera a pressão','H, He'],
+['Colapso da nuvem','um grumo denso desaba sobre si mesmo','Colapso: o gás aquece ao ficar opaco à própria luz','H, He'],
+['Disco e jatos','o gás gira mais rápido, achata em disco e lança jatos','Conservação do momento angular: disco e jatos bipolares','H, He'],
+['Protoestrela','o centro esquenta até acender a fusão','Fusão do deutério a 10⁶ K e contração até 10⁷ K','D, ³He'],
+['Sequência principal','estrela quente e massiva: o ciclo CNO converte hidrogênio em hélio','4 ¹H → ⁴He, com C, N e O como catalisadores','He (cinza do núcleo), N'],
+['Queima do hélio','o hélio se funde em carbono e oxigênio; a estrela incha','3 ⁴He → ¹²C; ¹²C + ⁴He → ¹⁶O','C, O'],
+['Carbono e neônio','carbono e neônio ardem em camadas ao redor do núcleo','¹²C + ¹²C → ²⁰Ne + ⁴He; ²⁰Ne → ¹⁶O + ⁴He','Ne, Na, Mg'],
+['Oxigênio e silício','o oxigênio vira silício e enxofre, em camadas cada vez mais finas','¹⁶O + ¹⁶O → ²⁸Si + ⁴He (ou ³²S)','Si, S, Ar, Ca'],
+['Núcleo de ferro','o silício vira ferro: o núcleo não rende mais energia','²⁸Si → ⁵⁶Ni → ⁵⁶Fe, por captura de partículas alfa','Fe, Ni, Co'],
+['Colapso do núcleo de ferro','o núcleo cai sobre si mesmo em menos de um segundo','Fotodesintegração do ferro e captura de elétrons: p + e⁻ → n + ν','Nêutrons e neutrinos'],
+['Supernova','a onda de choque atravessa a estrela e espalha os elementos','Rebote do núcleo, explosão de neutrinos e nucleossíntese explosiva','Ni, Fe e mais pesados que o ferro (processo r: Au, U)'],
+['Buraco negro','o núcleo remanescente passa do limite e o horizonte se fecha','A matéria que volta forma um disco de acreção ao redor do horizonte','Remanescente de cerca de 8 M☉ dentro do horizonte']];
+const KEYS={
+ R:[[0,6e5],[.13,2e5],[.25,2e4],[.36,3e3],[.47,100],[.52,20],[.58,.03],[.68,.05],[.78,3],[.86,4],[1,4.7],[1.07,5],[1.22,3e3],[1.4,2e4]],
+ M:[[0,2000],[.13,1000],[.25,200],[.36,60],[.47,40],[.55,20],[.68,19],[.78,16],[.86,15],[1,14],[1.22,14],[1.3,8],[1.4,8]],
+ v:[[0,.3],[.25,.5],[.36,1],[.47,3],[.55,5]],
+ wv:[[.55,2500],[.68,2000],[.78,50],[1,30]],
+ vf:[[1,1e3],[1.07,7.5e4]],
+ vs:[[1.07,3e4],[1.22,1e4],[1.4,5e3]],
+ rho:[[0,1.7e-22],[.13,1.7e-21],[.24,1.7e-19],[.35,1.7e-17],[.44,1.7e-11],[.52,1e-3],[.55,8],[.68,12],[.7,1e3],[.78,2e5],[.86,1e7],[.94,1e8],[1,3e9],[1.07,4e14],[1.22,1e15]],
+ Tc:[[0,10],[.24,10],[.35,12],[.41,200],[.47,3e3],[.49,1e6],[.52,1e7],[.55,3.5e7],[.68,3.6e7],[.7,2e8],[.78,6e8],[.82,1.2e9],[.86,1.8e9],[.9,2.5e9],[.94,3e9],[1,4e9],[1.07,1e11],[1.22,5e10]],
+ Rc:[[.38,5],[.47,.3],[.52,.02],[.55,.008],[.68,.006],[.78,.002],[.86,.0007],[.94,.0002],[1,.0001],[1.07,1.3e-7],[1.4,1.6e-7]],
+ L:[[.47,1],[.55,3e4],[.68,6e4],[.78,1.2e5],[1,2e5],[1.07,2e5],[1.12,1e9],[1.2,3e9],[1.4,1e4]],
+ Te:[[.47,4e3],[.55,3.6e4],[.68,3e4],[.78,3.5e3],[1,3.2e3],[1.07,3.2e3],[1.12,3e4],[1.3,1e4],[1.4,5e3]],
+ Md:[[.36,1e-5],[.47,1e-3],[.55,2e-4]],
+ Wd:[[.55,1e-7],[.68,3e-7],[.78,1e-5],[1,1e-4]],
+ Me:[[1.07,1e-3],[1.22,6],[1.4,6]],
+ trem:[[.55,8e6],[.68,1e6],[.78,600],[.82,1],[.86,.5],[.9,.003],[.94,1e-5],[1,1e-7]],
+ ts:[[1,3e-11],[1.07,3e-8],[1.22,6e-4],[1.4,1e-2]],
+ age:[[0,0],[.13,6e5],[.24,1e6],[.35,1.3e6],[.46,1.4e6],[.55,1.5e6],[.68,9.5e6],[.78,1.05e7],[1,1.05e7],[1.4,1.05e7]]
+};
+function K(a,x,lg=true){if(x<a[0][0])return null;for(let i=0;i<a.length-1;i++){const[x0,y0]=a[i],[x1,y1]=a[i+1];if(x<=x1){const u=(x-x0)/(x1-x0);return lg?Math.exp(Math.log(y0)+(Math.log(y1)-Math.log(y0))*u):y0+(y1-y0)*u}}return a[a.length-1][1]}
+const sm=(a,b,x)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
+$('rs').onclick=()=>{k=0;spin=0;play=true;zlock=false;$('pp').textContent='Pausar'};
+$('pp').onclick=()=>{play=!play;$('pp').textContent=play?'Pausar':'Continuar'};
+$('ts').oninput=e=>{ts=+e.target.value;$('tv').textContent=String(ts).replace('.',',')+'×'};
+$('tl').oninput=e=>{k=e.target.value/1000};
+
+/* formatação */
+const SUP='⁰¹²³⁴⁵⁶⁷⁸⁹',sci=x=>x.toExponential(1).replace('e+','e').split('e');
+const fs=x=>{const[m,e]=sci(x);return m.replace('.',',')+' × 10'+[...String(+e)].map(c=>c=='-'?'⁻':SUP[c]).join('')};
+const f=(x,n=1)=>x.toFixed(n).replace('.',',');
+const ua=x=>x>=1e4?fs(x):x>=100?Math.round(x).toLocaleString('pt-BR'):x>=1?f(x,1):x>=.01?f(x,3):fs(x);
+const dur=y=>{const s=y*3.156e7;if(y>=1e6)return f(y/1e6,2)+' milhões de anos';if(y>=1e3)return Math.round(y/1e3)+' mil anos';if(y>=1)return f(y,y>=100?0:1)+' anos';if(s>=86400)return f(s/86400,1)+' dias';if(s>=3600)return f(s/3600,1)+' horas';if(s>=60)return Math.round(s/60)+' min';return f(s,s>=10?0:1)+' s'};
+
+/* barra lateral: escala log em unidades astronômicas */
+const RMIN=7e-8,RMAX=1.2e6,LK=Math.log(RMAX/RMIN),pos=r=>(1-Math.log(Math.max(r,RMIN)/RMIN)/LK)*100;
+const gauge=$('gauge');
+[[5e5,'Nuvem molecular'],[2e4,'Núcleo pré-estelar'],[100,'Disco'],[1,'Órbita da Terra'],[.00465,'Raio do Sol'],[1e-4,'Núcleo de ferro'],[1.6e-7,'Horizonte (≈ 24 km)']].forEach(([r,l])=>{
+ gauge.insertAdjacentHTML('beforeend',`<div class="mk" style="top:${pos(r)}%"><span class="lab">${l} · ${ua(r)} UA</span><i class="tick"></i></div>`)});
+gauge.insertAdjacentHTML('beforeend','<div class="mk cam" id="mo"><span class="lab" id="lo"></span><i class="tick"></i></div><div class="mk core" id="mc" style="display:none"><span class="lab" id="lc"></span><i class="tick"></i></div>');
+$('tg').onclick=()=>{const o=$('side').classList.toggle('open');$('tg').setAttribute('aria-expanded',o);$('tg').textContent=o?'Fechar':'Dados'};
+if(innerWidth>=820)$('side').classList.add('open');
+
+/* ciclo CNO */
+const CN=['¹²C','¹³N','¹³C','¹⁴N','¹⁵O','¹⁵N'],CE=['+p','β⁺','+p','+p','β⁺','+p→α'];
+const cx=140,cy=84,rx=95,ry=58,pts=CN.map((_,i)=>{const a=(i*60-90)*Math.PI/180;return[cx+rx*Math.cos(a),cy+ry*Math.sin(a)]});
+$('cs').innerHTML=CN.map((_,i)=>{const a=pts[i],b=pts[(i+1)%6],mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
+ return `<g class="ed" id="ce${i}"><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/><text x="${mx+(mx-cx)*.24}" y="${my+(my-cy)*.24+3}">${CE[i]}</text></g>`}).join('')
+ +CN.map((n,i)=>`<g class="nd" id="cn${i}"><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="17"/><text x="${pts[i][0]}" y="${pts[i][1]+4}">${n}</text></g>`).join('');
+
+/* camadas da estrela */
+const LY=[['Hidrogênio (envoltório)','#4d73ff'],['Hélio','#ffd966'],['Carbono','#ff8033'],['Neônio','#f266cc'],['Oxigênio','#66e699'],['Silício','#73ccff'],['Ferro','#e6e6ff']];
+$('lyr').innerHTML=LY.map((l,i)=>`<div class="r"><i style="background:${l[1]}"></i>${l[0]}<b id="ly${i}">—</b></div>`).join('');
+const bounds=L=>{const rHe=.33+.22*L/4;return[1,rHe,Math.max(0,Math.min(.4*sm(.7,1.7,L),rHe-.03)),.3*sm(1.4,2.4,L),.22*sm(2,3,L),.14*sm(2.6,3.4,L),.085*sm(3.3,4,L)]};
+
+let acc=0,phi=-1,cs=-1,uni={x:4.2,y:0,z:0,w:0,jet:0,star:0,Rs:0,L:0,cut:0,u:0};
+function setPhase(i){phi=i;$('ph').textContent=PH[i][0];$('pi').textContent=PH[i][1];$('rx').textContent=PH[i][2];$('el').textContent='Elementos: '+PH[i][3];
+ $('cno').style.display=i==5?'':'none';$('ly').style.display=i>=5&&i<10?'':'none'}
+function derive(){
+ const fd=1-sm(.52,.6,k),Re=(4.2-1.8*sm(0,.47,k))*fd+.01;
+ const L=k<.68?0:k<.78?(k-.68)/.1:k<.86?1+(k-.78)/.08:k<.94?2+(k-.86)/.08:3+(k-.94)/.06;
+ const su=Math.max(0,Math.min(1,(k-1.07)/.23)),fl=k<1.03?0:k<1.07?.6*sm(1.03,1.07,k):k<1.3?3*Math.exp(-(k-1.07)*28):0;
+ uni={x:Re,y:sm(.07,.22,k)*(1-.7*sm(.27,.44,k)),z:sm(.19,.47,k)*fd,w:sm(.3,.47,k)*fd,
+  jet:sm(.37,.49,k)*(.6+.4*sm(.49,.55,k))*(1-sm(.55,.6,k))+.35*sm(1.3,1.4,k),star:sm(.44,.54,k)*(1-sm(.52,.58,k)),
+  Rs:k>1.16?0:sm(.5,.57,k)*(.9+1.1*sm(.68,.78,k)+.1*sm(.78,.9,k))*(1+.6*sm(1.07,1.2,k)),L:Math.min(4,L),cut:sm(.58,.64,k),u:sm(.69,.78,k),
+  c:sm(1,1.07,k),sf:1-sm(1.07,1.15,k),S:.9*sm(1.2,1.3,k),dg:sm(1.26,1.4,k),
+  shR:k>=1.07?1.5+9*(1-(1-su)*(1-su)):0,shA:sm(1.07,1.1,k)*(1-.7*sm(1.25,1.4,k)),fl};
+ let i=0;PHK.forEach((p,j)=>{if(k>=p)i=j});if(i!==phi)setPhase(i);
+}
+function hud(dt){
+ acc+=dt;if(acc<.1)return;acc=0;
+ const na=(v,fm)=>v==null?'—':fm(v),late=k>=.55,col_=k>=1,sn=k>=1.07,bhm=k>=1.22,kn=Math.min(KMAX,k+.003),kp=Math.max(0,k-.003);
+ const R=K(KEYS.R,k),rc=K(KEYS.Rc,k);
+ $('mo').style.top=pos(R)+'%';$('lo').textContent='Estrutura · '+ua(R)+' UA';
+ $('mc').style.display=rc?'':'none';if(rc){$('mc').style.top=pos(rc)+'%';$('lc').textContent='Núcleo · '+ua(rc)+' UA'}
+ const ag=K(KEYS.age,k,false);
+ let rate;
+ if(col_)rate=(K(KEYS.ts,kn)-K(KEYS.ts,Math.max(1,kp)))/(kn-Math.max(1,kp))*ts/DUR;
+ else if(late)rate=-(K(KEYS.trem,Math.min(1,kn))-K(KEYS.trem,Math.max(.55,kp)))/.006*ts/DUR;
+ else rate=(K(KEYS.age,kn,false)-K(KEYS.age,kp,false))/.006*ts/DUR;
+ $('g0').textContent=dur(ag);$('g1').textContent=rate>0?'1 s ≈ '+dur(rate):'—';
+ $('l6').textContent=col_?'Tempo desde o colapso':'Falta para o colapso';
+ $('g5').textContent=col_?dur(K(KEYS.ts,k)):late?dur(K(KEYS.trem,k)):'—';
+ $('g2').textContent=ua(R)+' UA'+(late&&k<1.07&&R<20?' ('+Math.round(R/.00465)+' R☉)':'');
+ const M=K(KEYS.M,k);$('l3').textContent=bhm?'Massa do remanescente':late?'Massa da estrela':'Massa em colapso';
+ $('g3').textContent=(M>=100?Math.round(M).toLocaleString('pt-BR'):f(M,1))+' M☉';
+ const vk=sn?K(KEYS.vs,k):col_?K(KEYS.vf,k):late?K(KEYS.wv,k):K(KEYS.v,k);
+ $('l4').textContent=sn?'Velocidade do choque':col_?'Velocidade de queda do núcleo':late?'Velocidade do vento':'Velocidade de colapso';
+ $('g4').textContent=(vk>=1e3?Math.round(vk).toLocaleString('pt-BR'):f(vk,1))+' km/s';
+ const tc=K(KEYS.Tc,k),sing=k>=1.3;
+ $('c1').textContent=sing?'singularidade':fs(K(KEYS.rho,k))+' g/cm³';
+ $('c2').textContent=sing?'—':tc<1e4?Math.round(tc).toLocaleString('pt-BR')+' K':fs(tc)+' K';
+ $('c3').textContent=na(rc,v=>ua(v)+' UA');
+ $('l5').textContent=sn?'Massa ejetada':late?'Perda de massa (vento)':'Acreção de gás';
+ $('c5').textContent=sn?f(K(KEYS.Me,k),2)+' M☉':na(late?K(KEYS.Wd,k):K(KEYS.Md,k),v=>fs(v)+' M☉/ano');
+ $('c6').textContent=na(K(KEYS.L,k),v=>v>=100?fs(v)+' L☉':f(v,1)+' L☉');
+ $('c7').textContent=na(K(KEYS.Te,k),v=>Math.round(v).toLocaleString('pt-BR')+' K');
+ const az=((cam.yaw*180/Math.PI)%360+360)%360;
+ $('a1').textContent=Math.round(az)+'°';$('a2').textContent=Math.round(cam.pitch*180/Math.PI)+'°';
+ $('a3').textContent=f(Math.abs(yawRate)*180/Math.PI)+'°/s';
+ $('a4').textContent=f((.15+1.5*sm(.5,.9,k))*ts*180/Math.PI,0)+'°/s';
+ if(phi>=5&&phi<10){const b=bounds(uni.L);b.forEach((v,i)=>{$('ly'+i).textContent=v>.005?Math.round(v*100)+' %':'—'})}
+ if(phi==5){const i=Math.floor(T*1.4)%6;if(i!==cs){cs=i;for(let j=0;j<6;j++){$('ce'+j).classList.toggle('on',j==i);$('cn'+j).classList.toggle('on',j==i)}}}
+ const showBH=phi==12&&k>=1.27;$('bh').style.display=showBH?'':'none';
+ if(showBH){const rs=2.95*M,r=cam.dist/.9;
+  $('b1').textContent=f(rs,1)+' km';$('b2').textContent=f(rs*1.5,1)+' km';$('b3').textContent=f(rs*3,1)+' km';
+  $('b4').textContent=f(r,1)+' Rs';$('b5').textContent=f(Math.sqrt(.5/(r-1))*100,1)+' % c';$('b6').textContent=f(Math.sqrt(1-1/r),3)+'×'}
+}
+
+/* loop */
+let last=performance.now(),T=0,ema=16;
+function frame(now){
+ const raw=Math.min(now-last,50);last=now;ema+=(raw-ema)*.05;
+ const dt=raw/1000;T+=dt*ts;
+ if(play&&k<KMAX)k=Math.min(KMAX,k+dt*ts/DUR);
+ if(!zlock){const tg=k>=1?13:9;cam.td+=(tg-cam.td)*Math.min(1,dt*.7)}
+ $('tl').value=k*1000;derive();spin+=dt*ts*(.15+1.5*sm(.5,.9,k));
+ idle+=dt;if(idle>3)cam.ty+=dt*.07;
+ const kk=1-Math.exp(-dt*6);cam.yaw+=(cam.ty-cam.yaw)*kk;cam.pitch+=(cam.tp-cam.pitch)*kk;cam.dist+=(cam.td-cam.dist)*kk;
+ yawRate+=((cam.yaw-py)/Math.max(dt,.001)-yawRate)*.1;py=cam.yaw;
+ const cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch),d=cam.dist;
+ const p=[d*cp*Math.sin(cam.yaw),d*sp,d*cp*Math.cos(cam.yaw)],fw=p.map(v=>-v/d);
+ const l=Math.hypot(fw[2],fw[0]),rt=[-fw[2]/l,0,fw[0]/l],up=[-rt[2]*fw[1],rt[2]*fw[0]-rt[0]*fw[2],rt[0]*fw[1]];
+ gl.uniform2f(U.R,cv.width,cv.height);gl.uniform1f(U.T,T);gl.uniform3fv(U.C,p);
+ gl.uniformMatrix3fv(U.B,false,[...rt,...up,...fw]);
+ gl.uniform4f(U.P,uni.x,uni.y,uni.z,uni.w);gl.uniform4f(U.Q,uni.jet,uni.star,spin,uni.fl);gl.uniform4f(U.W,uni.c,uni.S,uni.dg,uni.sf);gl.uniform4f(U.X,uni.shR,uni.shA,0,0);
+ gl.uniform4f(U.V,uni.Rs,uni.L,uni.cut,uni.u);
+ gl.drawArrays(gl.TRIANGLES,0,3);
+ hud(dt);
+ if(ema>26&&sc>.35){sc*=.93;size();ema=18}else if(ema<14&&sc<(innerWidth<820?.75:1)){sc*=1.03;size();ema=16}
+ $('zs').value=cam.td;
+ requestAnimationFrame(frame);
+}
+if(gl)requestAnimationFrame(frame);
+</script>
+</body>
+</html>
